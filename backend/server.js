@@ -1,28 +1,61 @@
+// server.js
 const express = require("express");
-const printer = require("printer");
-const cors = require("cors");
-
 const app = express();
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
+const pdfPrinter = require("pdf-to-printer");
 
-// Enable CORS to allow communication between React frontend and Node.js backend
-app.use(cors());
-app.get("/check-printer", (req, res) => {
-  // Get list of all printers connected to the system
-  const printers = printer.getPrinters();
+app.use(express.json());
 
-  // Search for the TP808S printer by name
-  const tp808sPrinter = printers.find((p) => p.name.includes("TP808S"));
+app.post("/print-receipt", (req, res) => {
+  const filePath = path.join(__dirname, "receipt.pdf");
 
-  if (tp808sPrinter) {
-    // If printer is found, return its details and connected status
-    res.json({ connected: true, printer: tp808sPrinter });
-  } else {
-    // If printer is not found, return connected: false
-    res.json({ connected: false });
-  }
+  // Create a PDF document
+  const doc = new PDFDocument({ size: [300, 300] }); // Start with an estimated size
+  doc.pipe(fs.createWriteStream(filePath));
+
+  // Define text content
+  const content = [
+    "Receipt",
+    "Store Name: ABC Store",
+    `Date: ${new Date().toLocaleDateString()}`,
+    `Time: ${new Date().toLocaleTimeString()}`,
+    "Item 1: $10.00",
+    "Item 2: $5.00",
+    "Total: $15.00",
+    "Item 1: $10.00",
+    "Item 2: $5.00",
+    "Total: $15.00",
+    "Thank you for shopping with us!",
+  ];
+
+  // Remove any blank or empty lines
+  const filteredContent = content.filter((line) => line.trim() !== "");
+
+  // Define left margin
+  const leftMargin = 20; // Adjust this value as needed
+
+  // Add content to the PDF with left margin
+  doc.fontSize(12);
+  filteredContent.forEach((line, index) => {
+    doc.text(line, leftMargin, 50 + index * 15); // Adjust vertical spacing (50 + (index * 15)) as needed
+  });
+
+  doc.end();
+
+  // Wait for the file to be created
+  setTimeout(() => {
+    pdfPrinter
+      .print(filePath)
+      .then(() => res.sendStatus(200))
+      .catch((err) => {
+        console.error(err);
+        res.sendStatus(500);
+      });
+  }, 1000); // Delay to ensure PDF is created
 });
 
-// Start the backend server on port 5000
-app.listen(5000, () => {
-  console.log("Backend server is running on http://localhost:5000");
+app.listen(3001, () => {
+  console.log("Server running on http://localhost:3001");
 });

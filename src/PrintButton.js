@@ -1,16 +1,18 @@
 import React from "react";
-import printJS from "print-js";
 import "./PrintButton.css";
 import logo from "./images.png";
+import axios from "axios";
 
 const PrintButton = () => {
   const handlePrint = () => {
-    printJS({
-      printable: "printable-section",
-      type: "html",
-      targetStyles: ["*"],
-      style: "@page { size: 80mm auto; margin: 0; }",
-    });
+    axios
+      .post("http://localhost:3001/print-receipt")
+      .then(() => {
+        console.log("Print job started");
+      })
+      .catch((error) => {
+        console.error("Error printing", error);
+      });
   };
 
   return (
